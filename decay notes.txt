@@ -1,0 +1,1683 @@
+https://www.youtube.com/watch?v=mBoX_JCKZTE
+
+
+> neil degrasse explain style
+	- scrapy is a framework that creates spider crawlers for you, in a class style using command line
+	- you install it by pip install scrapy in your venv
+	- use python request library if your project only involves getting a json data from 1 url and do other stuffs
+	- use scrapy if your main project is to scrap(get data) on a lot of pages
+	- use a site that allows you to scrape them a lot so your IP will not get banned like books.toscrape.com
+	- you start a project by running a command "scrapy startproject projectname"
+	- to create a spider, cd to spider folder and command "scrapy genspider spidername homeurltoscrape"
+		- this will create a base class for you
+		- this class has a parse method that will trigger after your spider finish running
+	- install scrapy shell by pip install ipython then update setting at scrapy.cfg so you can use the shell
+		- run command "scrapy shell" to use the shell
+		- you use the shell first to easily see the response of what you scrape
+		- you use fetch to crawl a url there
+		- use response object to check the response like
+			- response.css('css selectors here')
+		- by doing these in shell, you will have a high level picture of what you want to implement in the parse method inside the class of your spider
+	- using scrapy to crawl any webpage is easy
+	- getting your IP banned is also easy if you are not careful
+	- when using scrapy, its important to use PAID 3rd parties to handle your proxies so that your IP will not get banned
+		- examples are smartproxy, scrapeops.io
+		- scrapy can easily include 3rd parties like smartproxy, scrapeops.io to improve your spider
+		- scrapeops creates auto
+			- random IP for you
+			- random request header
+			- random fake user agents
+				- about your browser, os, screen size, etc
+			- random everything
+		- its much better to pay 3rd parties so you can scrap data faster, make sure your IP is safe, and finish the task asap
+			- rather than making limited random proxies by yourself and doing random time intervals to crawl which increase your electricity bill
+		- using free proxy parties like freeproxylist.net is a waste of time since most of data there are already banned
+	- you start crawling by command "scrapy crawl spidername"
+	- you can start a crawler and save the output in an csv by "scrapy crawl bookspider -O bookdata.csv"
+	- items.py, middleware.py, pipelines.py, and settings.py are autocreated files for you. Use these so that your main spider class file will be clean
+	- items.py
+		- this is like the model in your project. Makes your code cleaner and easier to read
+		- you can use it or not but better to use it
+	- pipelines.py
+		- for cleaning data, eg remove currency signs, format strings, etc
+		- for storing data in the database setup
+		- 
+	- middleware.py
+		- you setup your 3rd parties here like using smartproxy, scrapeops.io to give your random user agents and headers
+		- 
+	- settings.py
+		- uncomment some code here so you can use your pipelines.py, middleware.py, and etc
+		- you can set your useragent here but its better to use 3rd parties
+			- you can also create a list of useragents in your main spider class but try using 3rd parties
+		- and more other settings to turn on for middleware.py and etc
+		- 
+	- you can deploy your project at a paid cloud so you will not run it in your computer 24/7
+		- such as scrapeops, scrapycloud, scrapyd
+
+
+
+
+
+> routine n - install
+	/*
+		Notes:
+	*/
+	pip install scrapy
+
+
+
+> routine n - start project
+	/*
+		Notes:
+	*/
+	scrapy startproject bookscraper
+
+
+
+> routine n - create spider
+	/*
+		Notes:
+			- books.toscrape.com
+				- a website that allows people to practice scraping
+	*/
+	# go inside spider folder in your startproject
+	> cd spider
+	> scrapy genspider bookspider books.toscrape.com
+
+	- bookspider.py
+		import scrapy
+		class BookspiderSpider(scrapy.Spider):
+			name = "bookspider"
+			# this tells your spider to only limit its scraping on this domain and not the whole internet
+			allowed_domains = ["books.toscrape.com"]
+			# this is the first url that the spider starts scraping
+			start_urls = ["https://books.toscrape.com"]
+
+			# gets called once the response comes back
+			def parse(self, response):
+				pass
+
+
+
+
+> routine n - scrapy shell
+	/*
+		Notes:
+			- use the scrapy shell to find the css selectors we want to get the data from the page
+	*/
+	# just a shell which is easier to read
+	> pip install ipython
+
+	- scrapy.cfg
+		[settings]
+		default = bookscraper.settings
+		# add this line
+		shell = ipython
+
+		[deploy]
+		#url = http://localhost:6800/
+		project = bookscraper
+
+	# run scrapy shell
+	> scrapy shell
+	> fetch('https://books.toscrape.com/')
+	> response
+	# get all
+	> response.css('article.product_pod')
+	# get only the first <article>...</article>
+	> response.css('article.product_pod').get()
+	# put all the books in a different variable
+	> books = response.css('article.product_pod')
+	> len(books)
+	# put the first book
+	> book = books[0]
+	# get title of first book base on css
+	> book.css('h3 a::text').get()
+	# get price of first book base on css
+	> book.css('.product_price .price_color::text').get()
+	# get the link url
+	> book.css('h3 a').attrib['href']
+	# exit
+	> exit
+
+
+
+
+> routine n - nnn
+	/*
+		Notes:
+	*/
+	- bookspider.py
+		import scrapy
+		class BookspiderSpider(scrapy.Spider):
+			name = "bookspider"
+			# this tells your spider to only limit its scraping on this domain and not the whole internet
+			allowed_domains = ["books.toscrape.com"]
+			# this is the first url that the spider starts scraping
+			start_urls = ["https://books.toscrape.com"]
+			# gets called once the response comes back
+			def parse(self, response):
+				books = response.css('article.product_pod')
+				for book in books:
+					yield {
+						'name': book.css('h3 a::text').get(),
+						'price': book.css('.product_price .price_color::text').get(),
+						'url': book.css('h3 a').attrib['href']
+					}
+	# cd in inner bookscraper dir
+	# idk why you really need to go in this dir for it to work
+	# this will not work -> bookscraper\bookscraper\scrapy crawl bookspider
+	> cd ..
+	> scrapy crawl bookspider
+
+
+
+
+
+> routine n - next page url
+	/*
+		Notes:
+			- its like he use the scrapy shell first to see if his command returns the data that he wants before embedding it in the spider code
+	*/
+	> scrapy shell
+	> fetch('https://books.toscrape.com/')
+	> response.css('li.next a ::attr(href)').get()
+	> exit
+
+	- bookspider.py
+		import scrapy
+		class BookspiderSpider(scrapy.Spider):
+			name = "bookspider"
+			...
+			def parse(self, response):
+				books = response.css('article.product_pod')
+				for book in books:
+					...
+
+				next_page = response.css('li.next a ::attr(href)').get()
+
+				if next_page is not None:
+					# note the last next page of this website has a different url thats why we have this
+					if 'catalogue/' in next_page:
+						next_page_url = 'https://books.toscrape.com/' + next_page
+					else:
+						next_page_url = 'https://books.toscrape.com/catalogue/' + next_page
+						# we're telling the spider to follow the link
+						# call self.parse once we get the response
+						# that means it will keep on going until there is no more pages to go
+						yield response.follow(next_page_url, callback=self.parse)
+
+	# run the spider
+	> scrapy crawl bookspider
+
+
+
+
+> routine n - crawl each books detail page found in each products list page
+	/*
+		Notes:
+			- https://youtu.be/mBoX_JCKZTE?t=3757
+				- explanation on how to use .xpath
+				- because sometimes your targetted elements doesn't have classes or id
+				- you can just also do inspect element > copy > copy xpath
+			- https://youtu.be/mBoX_JCKZTE?t=4535
+				- quick recap, explanation of what the current spider do
+
+	*/
+	- bookspider.py
+		import scrapy
+
+
+		class BookspiderSpider(scrapy.Spider):
+		    name = "bookspider"
+		    # this tells your spider to only limit its scraping on this domain and not the whole internet
+		    allowed_domains = ["books.toscrape.com"]
+		    # this is the first url that the spider starts scraping
+		    start_urls = ["https://books.toscrape.com"]
+
+		    # gets called once the response comes back
+		    def parse(self, response):
+		        books = response.css('article.product_pod')
+
+		        # loop through each book
+		        for book in books:
+		            relative_url = book.css('h3 a ::attr(href)').get()
+
+		            if 'catalogue/' in relative_url:
+		                book_url = 'https://books.toscrape.com/' + relative_url
+		            else:
+		                book_url = 'https://books.toscrape.com/catalogue/' + relative_url
+		            # crawl each book and call parse_book_page for every result
+		            yield response.follow(book_url, callback=self.parse_book_page)
+
+		        next_page = response.css('li.next a ::attr(href)').get()
+
+		        # if we have next page, lets crawl it calling ourself def parse
+		        if next_page is not None:
+		            # note the last next page of this website has a different url thats why we have this
+		            if 'catalogue/' in next_page:
+		                next_page_url = 'https://books.toscrape.com/' + next_page
+		            else:
+		                next_page_url = 'https://books.toscrape.com/catalogue/' + next_page
+		            # we're telling the spider to follow the link
+		            # call self.parse once we get the response
+		            # that means it will keep on going until there is no more pages to go
+		            yield response.follow(next_page_url, callback=self.parse)
+
+		    def parse_book_page(self, response):
+		        table_rows = response.css("table tr")
+
+		        yield {
+		            'url': response.url,
+		            'title': response.css('.product_main h1::text').get(),
+		            'product_type': table_rows[1].css("td ::text").get(),
+		            'price_excl_tax': table_rows[2].css("td ::text").get(),
+		            'price_incl_tax': table_rows[3].css("td ::text").get(),
+		            'tax': table_rows[4].css("td ::text").get(),
+		            'availability': table_rows[5].css("td ::text").get(),
+		            'num_reviews': table_rows[6].css("td ::text").get(),
+		            'stars': response.css("p.star-rating").attrib['class'],
+		            'category': response.xpath("//ul[@class='breadcrumb']/li[@class='active']/preceding-sibling::li[1]/a/text()").get(),
+		            'description': response.xpath("//div[@id='product_description']/following-sibling::p/text()").get(),
+		            'price': response.css('p.price_color ::text').get(),
+		        }
+
+	# run the spider and saves it to bookdata.csv
+	> scrapy crawl bookspider -O bookdata.csv
+
+	# run the spider and saves it to json format
+	# json is much easier to format
+	> scrapy crawl bookspider -O bookdata.json
+
+
+
+
+
+> routine n - clean and structure data
+	/*
+		Notes:
+			- items.py
+				- this is auto created when you generate a spider
+				- items just help us define what we want in a block of data that we're scraping 
+			- pipelines.py
+				- this is also auto created
+				- this is where you put code to clean/modify your crawled data
+				- you can also use the pipeline to send your crawled data to your database
+			- settings.py
+				- dont forget to enable your ITEM_PIPELINES by removing comment
+	*/
+	- bookspider.py
+		import scrapy
+		from bookscraper.items import BookItem
+
+		class BookspiderSpider(scrapy.Spider):
+			...
+
+		    def parse_book_page(self, response):
+
+		        table_rows = response.css("table tr")
+		        book_item = BookItem()
+
+		        book_item['url'] = response.url
+		        book_item['title'] = response.css('.product_main h1::text').get()
+		        book_item['upc'] = table_rows[0].css("td ::text").get()
+		        book_item['product_type'] = table_rows[1].css("td ::text").get()
+		        book_item['price_excl_tax'] = table_rows[2].css("td ::text").get()
+		        book_item['price_incl_tax'] = table_rows[3].css("td ::text").get()
+		        book_item['tax'] = table_rows[4].css("td ::text").get()
+		        book_item['availability'] = table_rows[5].css("td ::text").get()
+		        book_item['num_reviews'] = table_rows[6].css("td ::text").get()
+		        book_item['stars'] = response.css("p.star-rating").attrib['class']
+		        book_item['category'] = response.xpath("//ul[@class='breadcrumb']/li[@class='active']/preceding-sibling::li[1]/a/text()").get()
+		        book_item['description'] = response.xpath("//div[@id='product_description']/following-sibling::p/text()").get()
+		        book_item['price'] = response.css('p.price_color ::text').get()
+
+		        yield book_item
+
+
+	- items.py
+		import scrapy
+
+		class BookscraperItem(scrapy.Item):
+		    # define the fields for your item here like:
+		    name = scrapy.Field()
+		    pass
+
+		# you can use this to modify your data
+		# BUT its strongly recommended to do that in pipelines.py
+		def serialize_price(value):
+		    return f'£ {str(value)}'
+
+		class BookItem(scrapy.Item):
+		    url = scrapy.Field()
+		    title = scrapy.Field()
+		    upc = scrapy.Field()
+		    product_type = scrapy.Field()
+		    price_excl_tax = scrapy.Field()
+		    # price_excl_tax = scrapy.Field(serializer=serialize_price)
+		    price_incl_tax = scrapy.Field()
+		    tax = scrapy.Field()
+		    availability = scrapy.Field()
+		    num_reviews = scrapy.Field()
+		    stars = scrapy.Field()
+		    category = scrapy.Field()
+		    description = scrapy.Field()
+		    price = scrapy.Field()
+
+
+	- pipelines.py
+		from itemadapter import ItemAdapter
+
+		class BookscraperPipeline:
+		    def process_item(self, item, spider):
+
+		        adapter = ItemAdapter(item)
+
+		        # Strip all whitespaces from strings
+		        field_names = adapter.field_names()
+		        for field_name in field_names:
+		            if field_name != 'description':
+		                value = adapter.get(field_name)
+		                adapter[field_name] = value.strip()
+
+		        # Category & Product Type --> switch to lowercase
+		        lowercase_keys = ['category', 'product_type']
+		        for lowercase_key in lowercase_keys:
+		            value = adapter.get(lowercase_key)
+		            adapter[lowercase_key] = value.lower()
+
+		        # Price --> convert to float
+		        price_keys = ['price', 'price_excl_tax', 'price_incl_tax', 'tax']
+		        for price_key in price_keys:
+		            value = adapter.get(price_key)
+		            value = value.replace('£', '')
+		            adapter[price_key] = float(value)
+
+		        # Availability --> extract number of books in stock
+		        availability_string = adapter.get('availability')
+		        split_string_array = availability_string.split('(')
+		        if len(split_string_array) < 2:
+		            adapter['availability'] = 0
+		        else:
+		            availability_array = split_string_array[1].split(' ')
+		            adapter['availability'] = int(availability_array[0])
+
+		        # Reviews --> convert string to number
+		        num_reviews_string = adapter.get('num_reviews')
+		        adapter['num_reviews'] = int(num_reviews_string)
+
+		        # Stars --> convert text to number
+		        stars_string = adapter.get('stars')
+		        split_stars_array = stars_string.split(' ')
+		        stars_text_value = split_stars_array[1].lower()
+		        if stars_text_value == "zero":
+		            adapter['stars'] = 0
+		        elif stars_text_value == "one":
+		            adapter['stars'] = 1
+		        elif stars_text_value == "two":
+		            adapter['stars'] = 2
+		        elif stars_text_value == "three":
+		            adapter['stars'] = 3
+		        elif stars_text_value == "four":
+		            adapter['stars'] = 4
+		        elif stars_text_value == "five":
+		            adapter['stars'] = 5
+
+		        return item
+
+
+	- settings.py
+		ITEM_PIPELINES = {
+		    "bookscraper.pipelines.BookscraperPipeline": 300,
+		}	
+
+
+
+	# run spider
+	> scrapy crawl bookspider
+	or
+	> scrapy crawl bookspider -O cleandata.json
+
+
+
+
+
+> routine n - saving data - command line
+	/*
+		Notes:
+			- saving data
+				- command line
+	*/
+	# output date in csv. -O means create new or overwrite
+	> scrapy crawl bookspider -O bookdata.csv
+
+	# append data in csv. -o small o is append
+	> scrapy crawl bookspider -o bookdata.csv
+
+
+
+> routine n - saving data - feed settings
+	/*
+		Notes:
+			- saving data
+				- feed settings
+	*/
+	- settings.py
+		# add line near BOT_NAME
+		FEEDS = {
+			'booksdata.json': {'format': 'json'}
+		}
+
+		# run spider
+		> scrapy crawl bookspider
+
+
+
+	# specify the feed data in your spider
+	- bookspider.py
+		class BookspiderSpider(scrapy.Spider):
+		    name = "bookspider"
+		    allowed_domains = ["books.toscrape.com"]
+		    start_urls = ["https://books.toscrape.com"]
+
+		    # this will overwrite what is in your settings.py
+		    custom_settings = {
+		    	'FEEDS': {
+		    		'booksdata.csv': {'format': 'csv', 'overwrite': True}
+		    	}
+		    }
+
+		    ...
+
+
+
+
+> routine n - saving data - into database
+	/*
+		Notes:
+			- https://youtu.be/mBoX_JCKZTE?t=6819
+			- saving data
+				- into database
+	*/
+	# install mysql application
+		- https://dev.mysql.com/downloads/mysql/
+	# install mysql workbench
+
+	# check mysql version in terminal
+		> mysql --version
+		> create database books;
+		> show databases;
+		> exit
+
+	# install mysql python connector 
+		> pip install mysql mysql-connector-python
+
+
+	- pipelines.py
+		import mysql.connector
+		from itemadapter import ItemAdapter
+
+		class BookscraperPipeline:
+		    ...
+
+		class SaveToMySQLPipeline:
+
+		    def __init__(self):
+		        self.conn = mysql.connector.connect(
+		            host='localhost',
+		            user='localhost',
+		            password='localhostpass',  # add your password here if you have one set
+		            database='books'
+		        )
+
+		        # Create cursor, used to execute commands
+		        self.cur = self.conn.cursor()
+
+		        # Create books table if none exists
+		        self.cur.execute("""
+		        CREATE TABLE IF NOT EXISTS books(
+		            id int NOT NULL auto_increment, 
+		            url VARCHAR(255),
+		            title text,
+		            upc VARCHAR(255),
+		            product_type VARCHAR(255),
+		            price_excl_tax DECIMAL,
+		            price_incl_tax DECIMAL,
+		            tax DECIMAL,
+		            price DECIMAL,
+		            availability INTEGER,
+		            num_reviews INTEGER,
+		            stars INTEGER,
+		            category VARCHAR(255),
+		            description text,
+		            PRIMARY KEY (id)
+		        )
+		        """)
+
+		    def process_item(self, item, spider):
+
+		        # Define insert statement
+		        self.cur.execute(""" insert into books (
+		            url, 
+		            title, 
+		            upc, 
+		            product_type, 
+		            price_excl_tax,
+		            price_incl_tax,
+		            tax,
+		            price,
+		            availability,
+		            num_reviews,
+		            stars,
+		            category,
+		            description
+		            ) values (
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s
+		                )""", (
+		            item["url"],
+		            item["title"],
+		            item["upc"],
+		            item["product_type"],
+		            item["price_excl_tax"],
+		            item["price_incl_tax"],
+		            item["tax"],
+		            item["price"],
+		            item["availability"],
+		            item["num_reviews"],
+		            item["stars"],
+		            item["category"],
+		            str(item["description"][0])
+		        ))
+
+		        # ## Execute insert of data into database
+		        self.conn.commit()
+		        return item
+
+		    def close_spider(self, spider):
+
+		        # Close cursor & connection to database
+		        self.cur.close()
+		        self.conn.close()
+
+
+	- settings.py
+		ITEM_PIPELINES = {
+		    "bookscraper.pipelines.BookscraperPipeline": 300,
+		    "bookscraper.pipelines.SaveToMySQLPipeline": 400,
+		}
+
+
+	# run spider
+	> scrapy crawl bookspider
+
+	# drop table otherwise it will keep appending while we are testing
+	> mysql -u locahost -p
+	> localhostpass
+	> show databases;
+	> use books;
+	> drop books;
+	> show tables;
+
+
+
+
+
+> routine n - byPass and not get block
+	/*
+		Notes:
+			- how to find headers and user agent
+				- https://youtu.be/mBoX_JCKZTE?t=7532
+			- use these to byPass:
+				- change all request headers data, not just user agents
+				- change ip address
+				- change sessions and cookies?
+				- user agents
+			- why you get block
+				- if the site sees you looking at their 10+ pages 
+					- with same user agents or request headers
+					- with the same IP
+					- with speed
+			- how they can block you
+				- they might set a cookie and flag you
+	*/
+
+
+
+> routine n - disable pipeline for db
+	/*
+		Notes:
+			- for testing
+	*/
+	ITEM_PIPELINES = {
+	    "bookscraper.pipelines.BookscraperPipeline": 300,
+	    # "bookscraper.pipelines.SaveToMySQLPipeline": 400,
+	}
+
+
+
+> routine n - simple setting user agent
+	/*
+		Notes:
+	*/
+	- settings.py
+	# dont do this as you will get block asap coz your using same agent
+	USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OPR/106.0.0.0'
+
+
+
+> routine n - add random user agent to our request - NOT ENOUGH!!!
+	/*
+		Notes:
+			- WARNING
+				- this is still not enough
+				- still not enough even if you have 10 user agents and making thousands of requests
+				- you will use middlewares.py later to try and solve this
+					- implement a middleware
+					- use different fake user agents that we would get from a fake user agent API
+	*/
+	import scrapy
+	from bookscraper.items import BookItem
+	import random
+
+
+	class BookspiderSpider(scrapy.Spider):
+	    name = "bookspider"
+	    ...
+
+	    # WARNING
+	    # still not enough
+	    user_agent_list = [
+	        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0',
+	        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+	        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+	        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0',
+	        'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
+	        'Mozilla/5.0 (iPad; CPU OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
+	        'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36',
+	        'Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36',
+	        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+	        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+	    ]
+
+	    def parse(self, response):
+	        books = response.css('article.product_pod')
+
+	        # loop through each book
+	        for book in books:
+	            ...
+	            yield response.follow(book_url, callback=self.parse_book_page, headers={"User-Agent": self.user_agent_list[random.randint(0, len(self.user_agent_list)-1)]})
+
+	        next_page = response.css('li.next a ::attr(href)').get()
+
+	        if next_page is not None:
+	            ...
+	            yield response.follow(next_page_url, callback=self.parse, headers={"User-Agent": self.user_agent_list[random.randint(0, len(self.user_agent_list)-1)]})
+
+	    def parse_book_page(self, response):
+	    	...
+
+
+
+
+
+> routine n - middleware - use different fake user-agents/browser header that we can get from a fake user agent API
+	/*
+		Notes:
+			- scrapeops.io
+				- api to get fake user agents
+				- get url
+					- https://scrapeops.io/app/headers
+					- sample
+						- https://headers.scrapeops.io/v1/user-agents?api_key=1d65521a-99b0-46d6-826f-5516af4b8698
+				- in their website
+					- you can get just the user-agent or the whole header
+					- in the last part of this section, he changed it to getting the whole header
+			- middlewares.py
+				- this is also auto created when generated spider
+				- you just need to add your code
+	*/
+	- settings.py
+		...
+		SCRAPEOPS_API_KEY = '1d65521a-99b0-46d6-826f-5516af4b8698'
+		SCRAPEOPS_FAKE_USER_AGENT_ENDPOINT = 'https://headers.scrapeops.io/v1/user-agents'
+		SCRAPEOPS_FAKE_USER_AGENT_ENABLED = True
+		SCRAPEOPS_FAKE_BROWSER_HEADER_ENDPOINT = 'https://headers.scrapeops.io/v1/browser-headers'
+		SCRAPEOPS_FAKE_BROWSER_HEADER_ENABLED = True
+		# this is the number of agents/headers
+		SCRAPEOPS_NUM_RESULTS = 50
+		...
+		DOWNLOADER_MIDDLEWARES = {
+		    # "bookscraper.middlewares.BookscraperDownloaderMiddleware": 543,
+		    # "bookscraper.middlewares.ScrapeOpsFakeUserAgentMiddleware": 400,
+		    "bookscraper.middlewares.ScrapeOpsFakeBrowserHeaderAgentMiddleware": 400,
+		}		
+
+
+	- middlewares.py
+		import requests
+		from random import randint
+		from urllib.parse import urlencode
+		from scrapy import signals
+		from itemadapter import is_item, ItemAdapter
+
+		...
+
+
+		class BookscraperSpiderMiddleware:
+		    ...
+
+
+		class BookscraperDownloaderMiddleware:
+		    ...
+
+
+		class ScrapeOpsFakeUserAgentMiddleware:
+
+		    @classmethod
+		    def from_crawler(cls, crawler):
+		        return cls(crawler.settings)
+
+		    def __init__(self, settings):
+		        self.scrapeops_api_key = settings.get('SCRAPEOPS_API_KEY')
+		        self.scrapeops_endpoint = settings.get(
+		            'SCRAPEOPS_FAKE_USER_AGENT_ENDPOINT', 'https://headers.scrapeops.io/v1/user-agents?')
+		        self.scrapeops_fake_user_agents_active = settings.get(
+		            'SCRAPEOPS_FAKE_USER_AGENT_ENABLED', False)
+		        self.scrapeops_num_results = settings.get('SCRAPEOPS_NUM_RESULTS')
+		        self.headers_list = []
+		        self._get_user_agents_list()
+		        self._scrapeops_fake_user_agents_enabled()
+
+		    def _get_user_agents_list(self):
+		        payload = {'api_key': self.scrapeops_api_key}
+		        if self.scrapeops_num_results is not None:
+		            payload['num_results'] = self.scrapeops_num_results
+		        response = requests.get(self.scrapeops_endpoint,
+		                                params=urlencode(payload))
+		        json_response = response.json()
+		        self.user_agents_list = json_response.get('result', [])
+
+		    def _get_random_user_agent(self):
+		        random_index = randint(0, len(self.user_agents_list) - 1)
+		        return self.user_agents_list[random_index]
+
+		    def _scrapeops_fake_user_agents_enabled(self):
+		        if self.scrapeops_api_key is None or self.scrapeops_api_key == '' or self.scrapeops_fake_user_agents_active == False:
+		            self.scrapeops_fake_user_agents_active = False
+		        else:
+		            self.scrapeops_fake_user_agents_active = True
+
+		    def process_request(self, request, spider):
+		        random_user_agent = self._get_random_user_agent()
+		        request.headers['User-Agent'] = random_user_agent
+
+		        print("************ NEW User-Agent ATTACHED *******")
+		        print(request.headers['User-Agent'])
+
+
+		class ScrapeOpsFakeBrowserHeaderAgentMiddleware:
+
+		    @classmethod
+		    def from_crawler(cls, crawler):
+		        return cls(crawler.settings)
+
+		    def __init__(self, settings):
+		        self.scrapeops_api_key = settings.get('SCRAPEOPS_API_KEY')
+		        self.scrapeops_endpoint = settings.get(
+		            'SCRAPEOPS_FAKE_BROWSER_HEADER_ENDPOINT', 'https://headers.scrapeops.io/v1/browser-headers')
+		        self.scrapeops_fake_browser_headers_active = settings.get(
+		            'SCRAPEOPS_FAKE_BROWSER_HEADER_ENABLED', True)
+		        self.scrapeops_num_results = settings.get('SCRAPEOPS_NUM_RESULTS')
+		        self.headers_list = []
+		        self._get_headers_list()
+		        self._scrapeops_fake_browser_headers_enabled()
+
+		    def _get_headers_list(self):
+		        payload = {'api_key': self.scrapeops_api_key}
+		        if self.scrapeops_num_results is not None:
+		            payload['num_results'] = self.scrapeops_num_results
+		        response = requests.get(self.scrapeops_endpoint,
+		                                params=urlencode(payload))
+		        json_response = response.json()
+		        self.headers_list = json_response.get('result', [])
+
+		    def _get_random_browser_header(self):
+		        random_index = randint(0, len(self.headers_list) - 1)
+		        return self.headers_list[random_index]
+
+		    def _scrapeops_fake_browser_headers_enabled(self):
+		        if self.scrapeops_api_key is None or self.scrapeops_api_key == '' or self.scrapeops_fake_browser_headers_active == False:
+		            self.scrapeops_fake_browser_headers_active = False
+		        else:
+		            self.scrapeops_fake_browser_headers_active = True
+
+		    def process_request(self, request, spider):
+		        random_browser_header = self._get_random_browser_header()
+
+		        request.headers['accept-language'] = random_browser_header['accept-language']
+		        request.headers['sec-fetch-user'] = random_browser_header['sec-fetch-user']
+		        request.headers['sec-fetch-mod'] = random_browser_header['sec-fetch-mod']
+		        request.headers['sec-fetch-site'] = random_browser_header['sec-fetch-site']
+		        request.headers['sec-ch-ua-platform'] = random_browser_header['sec-ch-ua-platform']
+		        request.headers['sec-ch-ua-mobile'] = random_browser_header['sec-ch-ua-mobile']
+		        request.headers['sec-ch-ua'] = random_browser_header['sec-ch-ua']
+		        request.headers['accept'] = random_browser_header['accept']
+		        request.headers['user-agent'] = random_browser_header['user-agent']
+		        request.headers['upgrade-insecure-requests'] = random_browser_header.get(
+		            'upgrade-insecure-requests')
+
+		        print("************ NEW HEADER ATTACHED *******")
+		        print(request.headers)
+
+	- bookspider.py
+		import scrapy
+		from bookscraper.items import BookItem
+
+		class BookspiderSpider(scrapy.Spider):
+		    name = "bookspider"
+		    # this tells your spider to only limit its scraping on this domain and not the whole internet
+		    allowed_domains = ["books.toscrape.com"]
+		    # this is the first url that the spider starts scraping
+		    start_urls = ["https://books.toscrape.com"]
+
+		    # this will overwrite what is in your settings.py
+		    custom_settings = {
+		        'FEEDS': {
+		            'booksdata.csv': {'format': 'csv', 'overwrite': True}
+		        }
+		    }
+
+		    # gets called once the response comes back
+		    def parse(self, response):
+		        books = response.css('article.product_pod')
+
+		        # loop through each book
+		        for book in books:
+		            relative_url = book.css('h3 a ::attr(href)').get()
+
+		            if 'catalogue/' in relative_url:
+		                book_url = 'https://books.toscrape.com/' + relative_url
+		            else:
+		                book_url = 'https://books.toscrape.com/catalogue/' + relative_url
+		            # crawl each book and call parse_book_page for every result
+		            # also pick one random user_agent_list so that we will not get block
+		            yield response.follow(book_url, callback=self.parse_book_page)
+
+		        next_page = response.css('li.next a ::attr(href)').get()
+
+		        # if we have next page, lets crawl it calling ourself def parse
+		        if next_page is not None:
+		            # note the last next page of this website has a different url thats why we have this
+		            if 'catalogue/' in next_page:
+		                next_page_url = 'https://books.toscrape.com/' + next_page
+		            else:
+		                next_page_url = 'https://books.toscrape.com/catalogue/' + next_page
+		            # we're telling the spider to follow the link
+		            # call self.parse once we get the response
+		            # that means it will keep on going until there is no more pages to go
+		            yield response.follow(next_page_url, callback=self.parse)
+
+		    def parse_book_page(self, response):
+
+		        table_rows = response.css("table tr")
+		        book_item = BookItem()
+
+		        book_item['url'] = response.url
+		        book_item['title'] = response.css('.product_main h1::text').get()
+		        book_item['upc'] = table_rows[0].css("td ::text").get()
+		        book_item['product_type'] = table_rows[1].css("td ::text").get()
+		        book_item['price_excl_tax'] = table_rows[2].css("td ::text").get()
+		        book_item['price_incl_tax'] = table_rows[3].css("td ::text").get()
+		        book_item['tax'] = table_rows[4].css("td ::text").get()
+		        book_item['availability'] = table_rows[5].css("td ::text").get()
+		        book_item['num_reviews'] = table_rows[6].css("td ::text").get()
+		        book_item['stars'] = response.css("p.star-rating").attrib['class']
+		        book_item['category'] = response.xpath(
+		            "//ul[@class='breadcrumb']/li[@class='active']/preceding-sibling::li[1]/a/text()").get()
+		        book_item['description'] = response.xpath(
+		            "//div[@id='product_description']/following-sibling::p/text()").get()
+		        book_item['price'] = response.css('p.price_color ::text').get()
+
+		        yield book_item
+
+
+
+
+	# run spider
+	> scrapy crawl bookspider
+
+
+
+
+
+
+
+> routine n - rotating free proxy list
+	/*
+		Notes:
+			- default free proxy
+				- freeproxylists.net
+				- geonode.com/free-proxy-list
+				- https://youtu.be/mBoX_JCKZTE?t=9827
+					- explaining that these proxies might be slow since a lot of other people using it and maybe some of it are already block
+					- pros
+						- free
+					- cons
+						- it can take a long time
+						- high likelyhood that its block
+			- https://github.com/TeamHG-Memex/scrapy-rotating-proxies
+				- a middleware for scrapy to use rotating proxies
+			- https://youtu.be/mBoX_JCKZTE?t=10166
+				- he explains how the rotating proxies are checking the list if its usable
+				- you will see here the disadvantage of using free proxies as most of them are already dead
+				- when i tested myself, it tried to check the 4 i listed and slowly all of them got listed on the dead variable
+					- "No connection could be made because the target machine actively refused it.."
+	*/
+	# install scrapy rotating proxies
+	> pip install scrapy-rotating-proxies
+
+
+	- settings.py
+		...
+		ROTATING_PROXY_LIST = [
+		    '150.158.40.180:2080',
+		    '192.241.177.96:10599',
+		    '171.97.115.156:8888',
+		]
+		# ROTATING_PROXY_LIST_PATH = '/my/path/proxies.txt'
+		...
+		DOWNLOADER_MIDDLEWARES = {
+		    # "bookscraper.middlewares.BookscraperDownloaderMiddleware": 543,
+		    # "bookscraper.middlewares.ScrapeOpsFakeUserAgentMiddleware": 400,
+		    "bookscraper.middlewares.ScrapeOpsFakeBrowserHeaderAgentMiddleware": 400,
+		    'rotating_proxies.middlewares.RotatingProxyMiddleware': 610,
+		    'rotating_proxies.middlewares.BanDetectionMiddleware': 620,
+		}	
+
+
+	# run spider
+	> scrapy crawl bookspider
+
+
+
+
+
+
+> routine n - using proxy providers
+	/*
+		Notes:
+			- proxy providers
+				- smartproxy.com
+					- paid
+					- i was not able to follow in my code as I need to pay and I don't want to test if as of now
+						- https://youtu.be/mBoX_JCKZTE?t=10558
+	*/
+	- settings.py
+		DOWNLOADER_MIDDLEWARES = {
+		    # "bookscraper.middlewares.BookscraperDownloaderMiddleware": 543,
+		    # "bookscraper.middlewares.ScrapeOpsFakeUserAgentMiddleware": 400,
+		    "bookscraper.middlewares.ScrapeOpsFakeBrowserHeaderAgentMiddleware": 400,
+		    # 'rotating_proxies.middlewares.RotatingProxyMiddleware': 610,
+		    # 'rotating_proxies.middlewares.BanDetectionMiddleware': 620,
+		}	
+
+
+	- bookspider.py
+		import scrapy
+		from bookscraper.items import BookItem
+
+
+		class BookspiderSpider(scrapy.Spider):
+			...
+		    def parse(self, response):
+		        books = response.css('article.product_pod')
+		        for book in books:
+		            ...
+		            yield response.follow(book_url, callback=self.parse_book_page, meta={"proxy": "http://username:password@gate.smartproxy.com:7000"})
+
+
+
+
+
+> routine n - creating custom middelware for proxy
+	/*
+		Notes:
+			- https://youtu.be/mBoX_JCKZTE?t=10858
+				- i was not able to execute mine since this is a paid servcie
+				- 
+	*/
+	- settings.py
+		PROXY_USER = 'username'
+		PROXY_PASSWORD = 'password'
+		PROXY_ENDPOINT = 'gate.smartproxy.com'
+		PROXY_PORT = '7000'	
+		...
+		DOWNLOADER_MIDDLEWARES = {
+		    # "bookscraper.middlewares.BookscraperDownloaderMiddleware": 543,
+		    # "bookscraper.middlewares.ScrapeOpsFakeUserAgentMiddleware": 400,
+		    "bookscraper.middlewares.ScrapeOpsFakeBrowserHeaderAgentMiddleware": 400,
+		    "bookscraper.middlewares.MyProxyMiddleWare": 350,
+		}		
+
+
+	- middlewares.py
+		class MyProxyMiddleWare(object):
+
+		    @classmethod
+		    def from_crawler(cls, crawler):
+		        return cls(crawler.settings)
+
+		    def __init__(self, settings):
+		        self.user = settings.get('PROXY_USER')
+		        self.password = settings.get('PROXY_PASSWORD')
+		        self.endpoint = settings.get('PROXY_ENDPOINT')
+		        self.port = settings.get('PROXY_PORT')
+
+		    def process_request(self, request, spider):
+		        user_credentials = '{user}:{passw}'.format(
+		            user=self.user, passw=self.password)
+		        basic_authentication = 'Basic ' + \
+		            base64.b64encode(user_credentials.encode()).decode()
+		        host = 'http://{endpoint}:{port}'.format(
+		            endpoint=self.endpoint, port=self.port)
+		        request.meta['proxy'] = host
+		        request.headers['Proxy-Authorization'] = basic_authentication	
+
+
+	- bookspider.py
+		import scrapy
+		from bookscraper.items import BookItem
+
+		class BookspiderSpider(scrapy.Spider):
+			...
+		    def parse(self, response):
+		        books = response.css('article.product_pod')
+		        for book in books:
+		            ...
+		            # remove the meta since settings.py and middlewares.py are setup
+		            yield response.follow(book_url, callback=self.parse_book_page)
+
+
+
+
+> routine n - proxy api endpoints
+	/*
+		Notes:
+			- proxy api endpoints
+				- https://youtu.be/mBoX_JCKZTE?t=11091
+				- if you want to go just a step further
+					- and not have to deal with browser headers or user agents or headless browser
+				- again paid service
+					- scrapeops.io
+	*/
+
+	- https://youtu.be/mBoX_JCKZTE?t=11091
+		- i stop here since it needs paid service
+		- also much better to continue if 
+			- serious in scraping domain
+			- understand scrapy framework much better
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+> routine n - nnn
+	/*
+		Notes:
+	*/
+
+
+> routine n - nnn
+	/*
+		Notes:
+	*/
+
+
+> routine n - nnn
+	/*
+		Notes:
+	*/
+
+
+> routine n - nnn
+	/*
+		Notes:
+	*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+scrapy
+> python -m venv env
+> env\Scripts\activate
+	or
+	source env/bin/activate
+> code .
+> pip install scrapy
+> scrapy
+> scrapy startproject bookscraper
+	# outer and inner bookscraper will be created
+> cd bookscraper
+> cd bookscraper/spider
+> scrapy genspider bookspider books.toscrape.com
+	- bookspider.py
+		import scrapy
+
+		class BookspiderSpider(scrapy.Spider):
+		    name = "bookspider"
+		    allowed_domains = ["books.toscrape.com"]
+		    start_urls = ["https://books.toscrape.com"]
+
+		    def parse(self, response):
+		        pass
+> pip install ipython
+	- scrapy.cfg
+		[settings]
+		...
+		shell = ipython
+> scrapy shell
+	> fetch('https://books.toscrape.com')
+	> response
+	> response.css('article.product_pod')
+	> response.css('article.product_pod').get()
+	> books = response.css('article.product_pod')
+	> book = books[0]
+	> book.css('h3 a::text').get()
+	> book.css('.product_price .price_color::text').get()
+	> book.css('h3 a').attrib['href']
+	> exit
+> 
+	- bookspider.py
+		import scrapy
+
+		class BookspiderSpider(scrapy.Spider):
+		    name = "bookspider"
+		    allowed_domains = ["books.toscrape.com"]
+		    start_urls = ["https://books.toscrape.com"]
+
+		    def parse(self, response):
+		        books = response.css('article.product_pod')
+
+		        for book in books:
+		            yield {
+		                'name': book.css('h3 a::text').get(),
+		                'price': book.css('.product_price .price_color::text').get(),
+		                'url': book.css('h3 a').attrib['href'],
+		            }
+> cd ../
+> scrapy crawl bookspider
+> scrapy shell
+	> fetch('https://books.toscrape.com')
+	> response.css('li.next a::attr(href)').get()
+	> exit
+> go from page 1 to page last and get the books listed
+	- bookspider.py	
+		import scrapy
+
+		class BookspiderSpider(scrapy.Spider):
+		    name = "bookspider"
+		    allowed_domains = ["books.toscrape.com"]
+		    start_urls = ["https://books.toscrape.com"]
+
+		    def parse(self, response):
+		        books = response.css('article.product_pod')
+
+		        for book in books:
+		            yield {
+		                'name': book.css('h3 a::text').get(),
+		                'price': book.css('.product_price .price_color::text').get(),
+		                'url': book.css('h3 a').attrib['href'],
+		            }
+		        
+		        next_page = response.css('li.next a::attr(href)').get()
+
+		        if next_page is not None:
+		            if 'catalogue/' in next_page:
+		                next_page_url = 'https://books.toscrape.com/' + next_page
+		            else:
+		                # some next page url does not have catalogue/ string, so we add them so that our spider can continue crawling
+		                next_page_url = 'https://books.toscrape.com/catalogue/' + next_page
+
+		            # call function parse again and again until next_page is None
+		            yield response.follow(next_page_url, callback=self.parse)
+> scrapy crawl bookspider
+> scrapy shell
+	> fetch('https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html')
+	> response.css('.product_page')
+	> response.css('.product_main h1::text').get()
+	> exit
+> get book details listed in a listpage by opening its own page before going to the next listpage
+	- bookspider.py	
+		import scrapy
+
+		class BookspiderSpider(scrapy.Spider):
+		    name = "bookspider"
+		    allowed_domains = ["books.toscrape.com"]
+		    start_urls = ["https://books.toscrape.com"]
+
+		    def parse(self, response):
+		        books = response.css('article.product_pod')
+
+		        # check all books display in this page first and call self.parse_book_page to open each book own page and get the data there
+		        for book in books:
+		            relative_url = book.css('h3 a::attr(href)').get()
+		            
+		            if 'catalogue/' in relative_url:
+		                book_url = 'https://books.toscrape.com/' + relative_url
+		            else:
+		                # some next page url does not have catalogue/ string, so we add them so that our spider can continue crawling
+		                book_url = 'https://books.toscrape.com/catalogue/' + relative_url
+		            yield response.follow(book_url, callback=self.parse_book_page)
+		        
+		        # lets find the next page url so we can scrape the next book lists there
+		        next_page = response.css('li.next a::attr(href)').get()
+		        if next_page is not None:
+		            if 'catalogue/' in next_page:
+		                next_page_url = 'https://books.toscrape.com/' + next_page
+		            else:
+		                next_page_url = 'https://books.toscrape.com/catalogue/' + next_page
+		            yield response.follow(next_page_url, callback=self.parse)
+		        
+		    def parse_book_page(self, response):
+		        table_rows = response.css('table tr')
+
+		        yield {
+		            'url': response.url,
+		            'title': response.css('.product_main h1::text').get(),
+		            'product_type': table_rows[1].css("td ::text").get(),
+		            'price_excl_tax': table_rows[2].css("td ::text").get(),
+		            'price_incl_tax': table_rows[3].css("td ::text").get(),
+		            'tax': table_rows[4].css("td ::text").get(),
+		            'availability': table_rows[5].css("td ::text").get(),
+		            'num_reviews': table_rows[6].css("td ::text").get(),
+		            'stars': response.css("p.star-rating").attrib['class'],
+		            'category': response.xpath("//ul[@class='breadcrumb']/li[@class='active']/preceding-sibling::li[1]/a/text()").get(),
+		            'description': response.xpath("//div[@id='product_description']/following-sibling::p/text()").get(),
+		            'price': response.css('p.price_color ::text').get()
+		        }
+> scrapy crawl bookspider -O bookdata.csv
+> scrapy crawl bookspider -O bookdata.json
+- use items.py and pipeline for clean code
+	- settings.py
+		# uncomment
+			ITEM_PIPELINES = {
+			   "bookscraper.pipelines.BookscraperPipeline": 300,
+			}		
+	- items.py
+		# Define here the models for your scraped items
+		#
+		# See documentation in:
+		# https://docs.scrapy.org/en/latest/topics/items.html
+
+		import scrapy
+
+
+		class BookscraperItem(scrapy.Item):
+		    # define the fields for your item here like:
+		    name = scrapy.Field()
+		    pass
+
+
+		# you can use this to modify your data
+		# BUT its strongly recommended to do that in pipelines.py
+		def serialize_price(value):
+		    return f'£ {str(value)}'
+
+
+		class BookItem(scrapy.Item):
+		    url = scrapy.Field()
+		    title = scrapy.Field()
+		    upc = scrapy.Field()
+		    product_type = scrapy.Field()
+		    price_excl_tax = scrapy.Field()
+		    # price_excl_tax = scrapy.Field(serializer=serialize_price)
+		    price_incl_tax = scrapy.Field()
+		    tax = scrapy.Field()
+		    availability = scrapy.Field()
+		    num_reviews = scrapy.Field()
+		    stars = scrapy.Field()
+		    category = scrapy.Field()
+		    description = scrapy.Field()
+		    price = scrapy.Field()
+	- pipelines.py
+		from itemadapter import ItemAdapter
+
+		class BookscraperPipeline:
+		    def process_item(self, item, spider):
+
+		        adapter = ItemAdapter(item)
+
+		        # Strip all whitespaces from strings
+		        field_names = adapter.field_names()
+		        for field_name in field_names:
+		            if field_name != 'description':
+		                value = adapter.get(field_name)
+		                adapter[field_name] = value.strip()
+
+		        # Category & Product Type --> switch to lowercase
+		        lowercase_keys = ['category', 'product_type']
+		        for lowercase_key in lowercase_keys:
+		            value = adapter.get(lowercase_key)
+		            adapter[lowercase_key] = value.lower()
+
+		        # Price --> convert to float
+		        price_keys = ['price', 'price_excl_tax', 'price_incl_tax', 'tax']
+		        for price_key in price_keys:
+		            value = adapter.get(price_key)
+		            value = value.replace('£', '')
+		            adapter[price_key] = float(value)
+
+		        # Availability --> extract number of books in stock
+		        availability_string = adapter.get('availability')
+		        split_string_array = availability_string.split('(')
+		        if len(split_string_array) < 2:
+		            adapter['availability'] = 0
+		        else:
+		            availability_array = split_string_array[1].split(' ')
+		            adapter['availability'] = int(availability_array[0])
+
+		        # Reviews --> convert string to number
+		        num_reviews_string = adapter.get('num_reviews')
+		        adapter['num_reviews'] = int(num_reviews_string)
+
+		        # Stars --> convert text to number
+		        stars_string = adapter.get('stars')
+		        split_stars_array = stars_string.split(' ')
+		        stars_text_value = split_stars_array[1].lower()
+		        if stars_text_value == "zero":
+		            adapter['stars'] = 0
+		        elif stars_text_value == "one":
+		            adapter['stars'] = 1
+		        elif stars_text_value == "two":
+		            adapter['stars'] = 2
+		        elif stars_text_value == "three":
+		            adapter['stars'] = 3
+		        elif stars_text_value == "four":
+		            adapter['stars'] = 4
+		        elif stars_text_value == "five":
+		            adapter['stars'] = 5
+
+		        return item	
+	- bookspider.py
+		import scrapy
+		from bookscraper.items import BookItem
+
+		class BookspiderSpider(scrapy.Spider):
+		    name = "bookspider"
+		    allowed_domains = ["books.toscrape.com"]
+		    start_urls = ["https://books.toscrape.com"]
+
+		    def parse(self, response):
+		        books = response.css('article.product_pod')
+
+		        # check all books display in this page first and call self.parse_book_page to open each book own page and get the data there
+		        for book in books:
+		            relative_url = book.css('h3 a::attr(href)').get()
+		            
+		            if 'catalogue/' in relative_url:
+		                book_url = 'https://books.toscrape.com/' + relative_url
+		            else:
+		                # some next page url does not have catalogue/ string, so we add them so that our spider can continue crawling
+		                book_url = 'https://books.toscrape.com/catalogue/' + relative_url
+		            yield response.follow(book_url, callback=self.parse_book_page)
+		        
+		        # lets find the next page url so we can scrape the next book lists there
+		        next_page = response.css('li.next a::attr(href)').get()
+		        if next_page is not None:
+		            if 'catalogue/' in next_page:
+		                next_page_url = 'https://books.toscrape.com/' + next_page
+		            else:
+		                next_page_url = 'https://books.toscrape.com/catalogue/' + next_page
+		            yield response.follow(next_page_url, callback=self.parse)
+		        
+		    def parse_book_page(self, response):
+
+		        table_rows = response.css("table tr")
+		        book_item = BookItem()
+
+		        book_item['url'] = response.url
+		        book_item['title'] = response.css('.product_main h1::text').get()
+		        book_item['upc'] = table_rows[0].css("td ::text").get()
+		        book_item['product_type'] = table_rows[1].css("td ::text").get()
+		        book_item['price_excl_tax'] = table_rows[2].css("td ::text").get()
+		        book_item['price_incl_tax'] = table_rows[3].css("td ::text").get()
+		        book_item['tax'] = table_rows[4].css("td ::text").get()
+		        book_item['availability'] = table_rows[5].css("td ::text").get()
+		        book_item['num_reviews'] = table_rows[6].css("td ::text").get()
+		        book_item['stars'] = response.css("p.star-rating").attrib['class']
+		        book_item['category'] = response.xpath(
+		            "//ul[@class='breadcrumb']/li[@class='active']/preceding-sibling::li[1]/a/text()").get()
+		        book_item['description'] = response.xpath(
+		            "//div[@id='product_description']/following-sibling::p/text()").get()
+		        book_item['price'] = response.css('p.price_color ::text').get()
+
+		        yield book_item
+
+- overwrite
+> scrapy crawl bookspider -O cleandata.csv
+- append data
+> scrapy crawl bookspider -o cleandata.csv
+
+- save to database
+- install mysql first
+	- dev.mysql.com/downloads/mysql
+> mysql --version
+> mysql -u root
+	show databases;
+	create database books;
+	exit;
+> pip install mysql mysql-connector-python
+-
+	- settings.py
+		ITEM_PIPELINES = {
+		   "bookscraper.pipelines.BookscraperPipeline": 300,
+		   "bookscraper.pipelines.SaveToMySQLPipeline": 400,
+		}		
+
+	- pipelines.py
+		# Define your item pipelines here
+		#
+		# Don't forget to add your pipeline to the ITEM_PIPELINES setting
+		# See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+
+
+		# useful for handling different item types with a single interface
+		from itemadapter import ItemAdapter
+		import mysql.connector
+
+
+		class BookscraperPipeline:
+		    def process_item(self, item, spider):
+
+		        adapter = ItemAdapter(item)
+
+		        # Strip all whitespaces from strings
+		        field_names = adapter.field_names()
+		        for field_name in field_names:
+		            if field_name != 'description':
+		                value = adapter.get(field_name)
+		                adapter[field_name] = value.strip()
+
+		        # Category & Product Type --> switch to lowercase
+		        lowercase_keys = ['category', 'product_type']
+		        for lowercase_key in lowercase_keys:
+		            value = adapter.get(lowercase_key)
+		            adapter[lowercase_key] = value.lower()
+
+		        # Price --> convert to float
+		        price_keys = ['price', 'price_excl_tax', 'price_incl_tax', 'tax']
+		        for price_key in price_keys:
+		            value = adapter.get(price_key)
+		            value = value.replace('£', '')
+		            adapter[price_key] = float(value)
+
+		        # Availability --> extract number of books in stock
+		        availability_string = adapter.get('availability')
+		        split_string_array = availability_string.split('(')
+		        if len(split_string_array) < 2:
+		            adapter['availability'] = 0
+		        else:
+		            availability_array = split_string_array[1].split(' ')
+		            adapter['availability'] = int(availability_array[0])
+
+		        # Reviews --> convert string to number
+		        num_reviews_string = adapter.get('num_reviews')
+		        adapter['num_reviews'] = int(num_reviews_string)
+
+		        # Stars --> convert text to number
+		        stars_string = adapter.get('stars')
+		        split_stars_array = stars_string.split(' ')
+		        stars_text_value = split_stars_array[1].lower()
+		        if stars_text_value == "zero":
+		            adapter['stars'] = 0
+		        elif stars_text_value == "one":
+		            adapter['stars'] = 1
+		        elif stars_text_value == "two":
+		            adapter['stars'] = 2
+		        elif stars_text_value == "three":
+		            adapter['stars'] = 3
+		        elif stars_text_value == "four":
+		            adapter['stars'] = 4
+		        elif stars_text_value == "five":
+		            adapter['stars'] = 5
+
+		        return item
+
+
+		class SaveToMySQLPipeline:
+
+		    def __init__(self):
+		        self.conn = mysql.connector.connect(
+		            host='localhost',
+		            user='root',
+		            password='',  # add your password here if you have one set
+		            database='books'
+		        )
+
+		        # Create cursor, used to execute commands
+		        self.cur = self.conn.cursor()
+
+		        # Create books table if none exists
+		        self.cur.execute("""
+		        CREATE TABLE IF NOT EXISTS books(
+		            id int NOT NULL auto_increment, 
+		            url VARCHAR(255),
+		            title text,
+		            upc VARCHAR(255),
+		            product_type VARCHAR(255),
+		            price_excl_tax DECIMAL,
+		            price_incl_tax DECIMAL,
+		            tax DECIMAL,
+		            price DECIMAL,
+		            availability INTEGER,
+		            num_reviews INTEGER,
+		            stars INTEGER,
+		            category VARCHAR(255),
+		            description text,
+		            PRIMARY KEY (id)
+		        )
+		        """)
+
+		    def process_item(self, item, spider):
+
+		        # Define insert statement
+		        self.cur.execute(""" insert into books (
+		            url, 
+		            title, 
+		            upc, 
+		            product_type, 
+		            price_excl_tax,
+		            price_incl_tax,
+		            tax,
+		            price,
+		            availability,
+		            num_reviews,
+		            stars,
+		            category,
+		            description
+		            ) values (
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s,
+		                %s
+		                )""", (
+		            item["url"],
+		            item["title"],
+		            item["upc"],
+		            item["product_type"],
+		            item["price_excl_tax"],
+		            item["price_incl_tax"],
+		            item["tax"],
+		            item["price"],
+		            item["availability"],
+		            item["num_reviews"],
+		            item["stars"],
+		            item["category"],
+		            str(item["description"][0])
+		        ))
+
+		        # ## Execute insert of data into database
+		        self.conn.commit()
+		        return item
+
+		    def close_spider(self, spider):
+
+		        # Close cursor & connection to database
+		        self.cur.close()
+		        self.conn.close()
+
+> scrapy crawl bookspider
+
+
+
+
